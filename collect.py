@@ -115,6 +115,65 @@ HIGH_HARDWARE_KEYWORDS = [
     "pytorch",
 ]
 
+RELEVANCE_TERMS = [
+    "ai video",
+    "video generation",
+    "text to video",
+    "image to video",
+    "video",
+    "movie",
+    "clip",
+    "editing",
+    "ffmpeg",
+    "subtitle",
+    "caption",
+    "transcript",
+    "transcribe",
+    "tts",
+    "voice",
+    "speech",
+    "dubbing",
+    "avatar",
+    "digital human",
+    "talking head",
+    "talking avatar",
+    "lip sync",
+    "lipsync",
+    "anime",
+    "animation",
+    "shorts",
+    "youtube",
+    "prompt",
+    "seedance",
+]
+
+STRONG_RELEVANCE_TERMS = [
+    "ai video",
+    "video generation",
+    "text to video",
+    "image to video",
+    "digital human",
+    "talking avatar",
+    "talking head",
+    "lip sync",
+    "lipsync",
+    "subtitle",
+    "caption",
+    "tts",
+    "dubbing",
+    "seedance",
+]
+
+IRRELEVANT_HINTS = [
+    "microblogging",
+    "social network",
+    "free llm api keys",
+    "api keys for",
+    "anime tracker",
+    "streaming app",
+    "my awesome list",
+]
+
 BAD_KEYWORDS = [
     "crypto",
     "nft",
@@ -195,6 +254,16 @@ def infer_category(repo: dict[str, Any], fallback: str) -> str:
         if any(word in blob for word in words):
             return category
     return fallback
+
+
+def is_relevant(repo: dict[str, Any]) -> bool:
+    blob = text_blob(repo)
+    if any(word in blob for word in IRRELEVANT_HINTS):
+        return False
+    if any(word in blob for word in STRONG_RELEVANCE_TERMS):
+        return True
+    stars = int(repo.get("stargazers_count") or 0)
+    return stars >= 20 and any(word in blob for word in RELEVANCE_TERMS)
 
 
 def estimate_cost(repo: dict[str, Any]) -> str:
@@ -348,6 +417,8 @@ def normalize_repo(repo: dict[str, Any], fallback_category: str) -> dict[str, An
 
     blob = text_blob(repo)
     if any(word in blob for word in BAD_KEYWORDS):
+        return None
+    if not is_relevant(repo):
         return None
 
     category = infer_category(repo, fallback_category)
