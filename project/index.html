@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GitHub AI 自媒体项目每日监控看板</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --text: #172033;
+      --muted: #637083;
+      --line: #dce3ee;
+      --accent: #1268d3;
+      --accent-2: #0f8a74;
+      --warn: #a76000;
+      --hard: #a12436;
+      --shadow: 0 10px 28px rgba(27, 39, 64, 0.09);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+
+    header {
+      background: #ffffff;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .wrap {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    .top {
+      padding: 28px 0 22px;
+      display: grid;
+      gap: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(26px, 4vw, 42px);
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 8px 0 0;
+      max-width: 760px;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .stat {
+      background: #edf4ff;
+      border: 1px solid #d5e6fb;
+      border-radius: 8px;
+      padding: 12px;
+      min-height: 72px;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 22px;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .toolbar {
+      padding: 18px 0;
+      display: grid;
+      grid-template-columns: 1fr 180px 180px;
+      gap: 12px;
+      align-items: center;
+    }
+
+    input,
+    select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #ffffff;
+      color: var(--text);
+      font: inherit;
+      min-height: 44px;
+      padding: 9px 12px;
+      outline: none;
+    }
+
+    input:focus,
+    select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(18, 104, 211, 0.14);
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding-bottom: 18px;
+    }
+
+    .tab {
+      border: 1px solid var(--line);
+      background: #ffffff;
+      color: var(--text);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font: inherit;
+      cursor: pointer;
+      min-height: 38px;
+    }
+
+    .tab.active {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #ffffff;
+    }
+
+    main {
+      padding: 22px 0 42px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 360px;
+    }
+
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .name {
+      color: var(--text);
+      font-weight: 760;
+      text-decoration: none;
+      overflow-wrap: anywhere;
+      font-size: 17px;
+      line-height: 1.25;
+    }
+
+    .name:hover {
+      color: var(--accent);
+    }
+
+    .stars {
+      white-space: nowrap;
+      color: #5a4115;
+      background: #fff2ce;
+      border: 1px solid #f4d88f;
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .desc {
+      color: #354056;
+      margin: 0;
+      min-height: 72px;
+      overflow-wrap: anywhere;
+    }
+
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+
+    .badge {
+      border-radius: 999px;
+      padding: 5px 8px;
+      font-size: 12px;
+      font-weight: 700;
+      background: #eef1f5;
+      color: #3d4a5c;
+    }
+
+    .badge.category {
+      background: #e8f3ff;
+      color: #0f5cac;
+    }
+
+    .badge.easy {
+      background: #e2f6ef;
+      color: var(--accent-2);
+    }
+
+    .badge.medium {
+      background: #fff2ce;
+      color: var(--warn);
+    }
+
+    .badge.hard {
+      background: #fde6eb;
+      color: var(--hard);
+    }
+
+    .details {
+      display: grid;
+      gap: 9px;
+      margin-top: auto;
+    }
+
+    .detail {
+      border-top: 1px solid var(--line);
+      padding-top: 9px;
+    }
+
+    .detail b {
+      display: block;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 3px;
+    }
+
+    .detail span {
+      color: #263246;
+      overflow-wrap: anywhere;
+    }
+
+    .empty {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 28px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    footer {
+      color: var(--muted);
+      font-size: 13px;
+      padding: 16px 0 28px;
+    }
+
+    @media (max-width: 900px) {
+      .grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .toolbar {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .wrap {
+        width: min(100% - 22px, 1180px);
+      }
+
+      .stats,
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .top {
+        padding-top: 22px;
+      }
+
+      .card {
+        min-height: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap top">
+      <div>
+        <h1>GitHub AI 自媒体项目每日监控看板</h1>
+        <p class="subtitle">每天自动收集免费或低成本的 AI 视频、动漫视频、数字人、配音、字幕剪辑和短视频自动化开源项目。</p>
+      </div>
+      <div class="stats" aria-label="数据统计">
+        <div class="stat">
+          <strong id="total-count">0</strong>
+          <span>当前项目</span>
+        </div>
+        <div class="stat">
+          <strong id="updated-at">未更新</strong>
+          <span>最后更新时间</span>
+        </div>
+        <div class="stat">
+          <strong>¥0</strong>
+          <span>第一版运行成本</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section class="wrap" aria-label="筛选工具">
+    <div class="toolbar">
+      <input id="search" type="search" placeholder="搜索项目名、描述、分类、语言">
+      <select id="difficulty">
+        <option value="">全部难度</option>
+        <option value="小白可试">小白可试</option>
+        <option value="小白可先看">小白可先看</option>
+        <option value="需要一点命令行">需要一点命令行</option>
+        <option value="暂时偏难">暂时偏难</option>
+      </select>
+      <select id="sort">
+        <option value="score">综合推荐</option>
+        <option value="updated">最近更新</option>
+        <option value="stars">Star 最多</option>
+      </select>
+    </div>
+    <div id="tabs" class="tabs" aria-label="项目分类"></div>
+  </section>
+
+  <main class="wrap">
+    <div id="grid" class="grid" aria-live="polite"></div>
+    <div id="empty" class="empty" hidden>没有找到符合条件的项目，换个关键词或分类试试。</div>
+  </main>
+
+  <footer class="wrap">
+    采集任务在 GitHub Actions 云端运行，不占用你的电脑内存；网页通过 GitHub Pages 打开即可查看。
+  </footer>
+
+  <script id="project-data" type="application/json">
+{
+  "generated_at": "",
+  "count": 0,
+  "projects": []
+}
+  </script>
+
+  <script>
+    const dataNode = document.getElementById("project-data");
+    const data = JSON.parse(dataNode.textContent);
+    const state = {
+      category: "全部",
+      search: "",
+      difficulty: "",
+      sort: "score"
+    };
+
+    const grid = document.getElementById("grid");
+    const empty = document.getElementById("empty");
+    const search = document.getElementById("search");
+    const difficulty = document.getElementById("difficulty");
+    const sort = document.getElementById("sort");
+    const tabs = document.getElementById("tabs");
+
+    document.getElementById("total-count").textContent = String(data.count || data.projects.length || 0);
+    document.getElementById("updated-at").textContent = formatDate(data.generated_at);
+
+    function formatDate(value) {
+      if (!value) return "等待首次采集";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return date.toLocaleString("zh-CN", {
+        timeZone: "Asia/Shanghai",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    function escapeText(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      }[char]));
+    }
+
+    function starText(value) {
+      const stars = Number(value || 0);
+      if (stars >= 1000) return `${(stars / 1000).toFixed(1)}k`;
+      return String(stars);
+    }
+
+    function difficultyClass(value) {
+      if (value === "小白可试" || value === "小白可先看") return "easy";
+      if (value === "需要一点命令行") return "medium";
+      return "hard";
+    }
+
+    function buildTabs() {
+      const categories = ["全部", ...new Set(data.projects.map((project) => project.category).filter(Boolean))];
+      tabs.innerHTML = categories.map((category) => (
+        `<button class="tab${category === state.category ? " active" : ""}" data-category="${escapeText(category)}">${escapeText(category)}</button>`
+      )).join("");
+    }
+
+    function matches(project) {
+      if (state.category !== "全部" && project.category !== state.category) return false;
+      if (state.difficulty && project.difficulty !== state.difficulty) return false;
+      const haystack = [
+        project.name,
+        project.description,
+        project.category,
+        project.language,
+        project.cost,
+        project.reason
+      ].join(" ").toLowerCase();
+      return haystack.includes(state.search.trim().toLowerCase());
+    }
+
+    function sortProjects(projects) {
+      const sorted = [...projects];
+      if (state.sort === "stars") {
+        sorted.sort((a, b) => Number(b.stars || 0) - Number(a.stars || 0));
+      } else if (state.sort === "updated") {
+        sorted.sort((a, b) => String(b.updated_at || "").localeCompare(String(a.updated_at || "")));
+      } else {
+        sorted.sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
+      }
+      return sorted;
+    }
+
+    function render() {
+      buildTabs();
+      const projects = sortProjects(data.projects.filter(matches));
+      empty.hidden = projects.length !== 0;
+      grid.innerHTML = projects.map((project) => `
+        <article class="card">
+          <div class="card-head">
+            <a class="name" href="${escapeText(project.url)}" target="_blank" rel="noopener noreferrer">${escapeText(project.name)}</a>
+            <span class="stars">★ ${starText(project.stars)}</span>
+          </div>
+          <p class="desc">${escapeText(project.description)}</p>
+          <div class="badges">
+            <span class="badge category">${escapeText(project.category)}</span>
+            <span class="badge ${difficultyClass(project.difficulty)}">${escapeText(project.difficulty)}</span>
+            <span class="badge">${escapeText(project.language)}</span>
+            <span class="badge">${escapeText(project.updated_at || "未知更新")}</span>
+          </div>
+          <div class="details">
+            <div class="detail">
+              <b>费用判断</b>
+              <span>${escapeText(project.cost)}</span>
+            </div>
+            <div class="detail">
+              <b>为什么推荐</b>
+              <span>${escapeText(project.reason)}</span>
+            </div>
+            <div class="detail">
+              <b>今晚第一步</b>
+              <span>${escapeText(project.first_step)}</span>
+            </div>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    tabs.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-category]");
+      if (!button) return;
+      state.category = button.dataset.category;
+      render();
+    });
+
+    search.addEventListener("input", () => {
+      state.search = search.value;
+      render();
+    });
+
+    difficulty.addEventListener("change", () => {
+      state.difficulty = difficulty.value;
+      render();
+    });
+
+    sort.addEventListener("change", () => {
+      state.sort = sort.value;
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>
