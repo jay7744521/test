@@ -83,6 +83,38 @@ BEGINNER_HINTS = [
     "windows",
 ]
 
+LOW_HARDWARE_HINTS = [
+    "web",
+    "browser",
+    "online",
+    "cloud",
+    "api",
+    "prompt",
+    "prompts",
+    "awesome",
+    "collection",
+    "guide",
+    "tutorial",
+    "no gpu",
+    "cpu",
+    "windows",
+]
+
+HIGH_HARDWARE_KEYWORDS = [
+    "cuda",
+    "gpu",
+    "nvidia",
+    "vram",
+    "comfyui",
+    "stable diffusion",
+    "diffusion model",
+    "local model",
+    "training",
+    "train your own",
+    "4090",
+    "pytorch",
+]
+
 BAD_KEYWORDS = [
     "crypto",
     "nft",
@@ -178,6 +210,17 @@ def estimate_cost(repo: dict[str, Any]) -> str:
     return "需查看许可证"
 
 
+def estimate_hardware(repo: dict[str, Any]) -> str:
+    blob = text_blob(repo)
+    low_hint = any(word in blob for word in LOW_HARDWARE_HINTS)
+    high_hint = any(word in blob for word in HIGH_HARDWARE_KEYWORDS)
+    if high_hint and not low_hint:
+        return "高：可能需要显卡，老笔记本暂不推荐"
+    if any(word in blob for word in ["docker", "python", "cli", "command line", "ffmpeg"]):
+        return "中：普通电脑可先看教程，运行可能要折腾"
+    return "低：老笔记本也适合先学习"
+
+
 def estimate_difficulty(repo: dict[str, Any]) -> str:
     blob = text_blob(repo)
     stars = int(repo.get("stargazers_count") or 0)
@@ -188,6 +231,29 @@ def estimate_difficulty(repo: dict[str, Any]) -> str:
     if any(word in blob for word in ["docker", "python", "cli", "command line"]):
         return "需要一点命令行"
     return "小白可先看"
+
+
+def chinese_summary(repo: dict[str, Any], category: str, hardware: str) -> str:
+    blob = text_blob(repo)
+    if "prompt" in blob and any(word in blob for word in ["video", "seedance", "anime", "image"]):
+        return "这是 AI 视频/图片提示词案例库，不吃电脑配置，适合先学习别人怎么写提示词。"
+    if "awesome" in blob or "collection" in blob:
+        return "这是资料合集类项目，主要用来找工具和教程，不需要安装，适合收藏慢慢看。"
+    if category == "视频生成":
+        return "这是 AI 视频生成相关项目，能帮助你了解文生视频、图生视频或自动生成视频的工具。"
+    if category == "动漫视频":
+        return "这是动漫视频或动画生成相关项目，适合学习 AI 动漫、角色动画和提示词案例。"
+    if category == "数字人":
+        return "这是数字人/虚拟人相关项目，常用于做会说话的头像、口型同步或虚拟主播。"
+    if category == "配音":
+        return "这是配音或语音相关项目，可能用于文字转语音、自动配音、声音处理或口播内容。"
+    if category == "字幕剪辑":
+        return "这是字幕、剪辑或视频处理工具，和自媒体实操更接近，适合做字幕、转写、剪辑辅助。"
+    if category == "短视频自动化":
+        return "这是短视频自动化工具，可能帮你把文字、图片、配音和素材组合成视频流程。"
+    if hardware.startswith("低"):
+        return "这是轻量级 AI 自媒体相关项目，适合先收藏、阅读说明和尝试在线演示。"
+    return "这是 AI 自媒体相关项目，建议先看 README 和演示，不急着安装到电脑。"
 
 
 def score_repo(repo: dict[str, Any], category: str) -> int:
@@ -206,6 +272,13 @@ def score_repo(repo: dict[str, Any], category: str) -> int:
     score += 8 if repo.get("topics") else 0
     score += 10 if any(word in blob for word in BEGINNER_HINTS) else 0
     score += 10 if category in ["字幕剪辑", "配音", "短视频自动化"] else 0
+    hardware = estimate_hardware(repo)
+    if hardware.startswith("低"):
+        score += 20
+    elif hardware.startswith("中"):
+        score += 5
+    else:
+        score -= 35
 
     pushed = repo.get("pushed_at") or ""
     try:
@@ -249,10 +322,16 @@ def recommendation_reason(repo: dict[str, Any], category: str, cost: str, diffic
         reasons.append("成本门槛较低")
     if category in ["字幕剪辑", "配音", "短视频自动化"]:
         reasons.append("更接近自媒体实操")
+    if estimate_hardware(repo).startswith("低"):
+        reasons.append("老笔记本友好")
     return "、".join(reasons[:3]) or "方向相关，适合收藏观察"
 
 
-def first_step(repo: dict[str, Any], difficulty: str) -> str:
+def first_step(repo: dict[str, Any], difficulty: str, hardware: str) -> str:
+    if hardware.startswith("低"):
+        return "先打开项目页面，看 README、截图或在线演示，判断是不是你今晚想学的方向。"
+    if hardware.startswith("高"):
+        return "先只收藏和看效果，不建议在老笔记本上安装运行。"
     if difficulty == "小白可试":
         return "先打开 GitHub 页面，找 README 里的 Demo、Web UI 或安装说明。"
     if difficulty == "需要一点命令行":
@@ -274,7 +353,11 @@ def normalize_repo(repo: dict[str, Any], fallback_category: str) -> dict[str, An
     category = infer_category(repo, fallback_category)
     cost = estimate_cost(repo)
     difficulty = estimate_difficulty(repo)
+    hardware = estimate_hardware(repo)
     score = score_repo(repo, category)
+
+    if hardware.startswith("高"):
+        return None
 
     if score < 15:
         return None
@@ -288,10 +371,12 @@ def normalize_repo(repo: dict[str, Any], fallback_category: str) -> dict[str, An
         "updated_at": (repo.get("pushed_at") or repo.get("updated_at") or "")[:10],
         "category": category,
         "difficulty": difficulty,
+        "hardware": hardware,
+        "chinese_summary": chinese_summary(repo, category, hardware),
         "cost": cost,
         "score": score,
         "reason": recommendation_reason(repo, category, cost, difficulty),
-        "first_step": first_step(repo, difficulty),
+        "first_step": first_step(repo, difficulty, hardware),
     }
 
 
