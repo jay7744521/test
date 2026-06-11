@@ -1,0 +1,40 @@
+name: Daily AI Video Project Radar
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 12:00 UTC = 20:00 Beijing time
+    - cron: "0 12 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Collect GitHub projects
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python collect.py
+
+      - name: Commit updated dashboard
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet index.html; then
+            echo "No dashboard changes to commit."
+          else
+            git add index.html
+            git commit -m "Update daily AI video project radar"
+            git push
+          fi
