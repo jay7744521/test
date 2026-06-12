@@ -29,6 +29,12 @@ INDEX_PATH = ROOT / "index.html"
 SEARCH_TERMS = [
     ("AI video", "视频生成"),
     ("video generation", "视频生成"),
+    ("AI video generator", "短视频自动化"),
+    ("AI short video", "短视频自动化"),
+    ("auto short video", "短视频自动化"),
+    ("one click video", "短视频自动化"),
+    ("video creator AI", "短视频自动化"),
+    ("video workflow", "短视频自动化"),
     ("text to video", "视频生成"),
     ("image to video", "视频生成"),
     ("anime video", "动漫视频"),
@@ -40,12 +46,16 @@ SEARCH_TERMS = [
     ("ffmpeg", "字幕剪辑"),
 ]
 
+FEATURED_REPOS = [
+    ("AIDC-AI", "Pixelle-Video", "短视频自动化"),
+]
+
 CATEGORY_KEYWORDS = [
     ("动漫视频", ["anime", "animation", "animate", "cartoon", "manga", "toon"]),
     ("数字人", ["digital human", "avatar", "talking head", "talking avatar", "lip sync", "lipsync", "face"]),
     ("配音", ["tts", "text to speech", "voice", "speech", "dubbing", "audio", "narration"]),
     ("字幕剪辑", ["subtitle", "caption", "transcribe", "ffmpeg", "edit", "clip", "video editor"]),
-    ("短视频自动化", ["short video", "auto video", "automated video", "social media", "reels", "tiktok", "youtube shorts"]),
+    ("短视频自动化", ["short video", "auto video", "automated video", "video creator", "video workflow", "video pipeline", "one click video", "webui", "social media", "reels", "tiktok", "youtube shorts"]),
     ("视频生成", ["video generation", "text to video", "image to video", "ai video", "generate video", "diffusion"]),
 ]
 
@@ -143,6 +153,10 @@ RELEVANCE_TERMS = [
     "animation",
     "shorts",
     "youtube",
+    "video creator",
+    "video workflow",
+    "video pipeline",
+    "one click video",
     "prompt",
     "seedance",
 ]
@@ -162,6 +176,10 @@ STRONG_RELEVANCE_TERMS = [
     "tts",
     "dubbing",
     "seedance",
+    "auto video",
+    "automated video",
+    "video creator",
+    "one click video",
 ]
 
 IRRELEVANT_HINTS = [
@@ -226,6 +244,11 @@ def search_repositories(term: str) -> list[dict[str, Any]]:
     url = f"https://api.github.com/search/repositories?{params}"
     data = github_request(url)
     return data.get("items", [])
+
+
+def fetch_repository(owner: str, repo: str) -> dict[str, Any] | None:
+    data = github_request(f"https://api.github.com/repos/{owner}/{repo}")
+    return data if data.get("html_url") else None
 
 
 def clean_text(value: str | None, max_length: int = 180) -> str:
@@ -304,6 +327,8 @@ def estimate_difficulty(repo: dict[str, Any]) -> str:
 
 def chinese_summary(repo: dict[str, Any], category: str, hardware: str) -> str:
     blob = text_blob(repo)
+    if any(word in blob for word in ["pixelle-video", "auto short video", "automated video", "one click video", "video creator", "video workflow", "video pipeline"]):
+        return "这是 AI 自动短视频工具，偏向输入主题后自动写文案、配图/生成视频、配音并合成成片，适合学习 AI 自媒体完整流程。"
     if "prompt" in blob and any(word in blob for word in ["video", "seedance", "anime", "image"]):
         return "这是 AI 视频/图片提示词案例库，不吃电脑配置，适合先学习别人怎么写提示词。"
     if "awesome" in blob or "collection" in blob:
@@ -454,6 +479,17 @@ def normalize_repo(repo: dict[str, Any], fallback_category: str) -> dict[str, An
 def collect_projects() -> list[dict[str, Any]]:
     repos_by_url: dict[str, dict[str, Any]] = {}
     token = os.environ.get("GITHUB_TOKEN", "").strip()
+
+    for owner, repo_name, fallback_category in FEATURED_REPOS:
+        print(f"[featured] Fetching: {owner}/{repo_name}")
+        repo = fetch_repository(owner, repo_name)
+        if not repo:
+            continue
+        item = normalize_repo(repo, fallback_category)
+        if item:
+            item["score"] += 40
+            item["reason"] = "你指定的重点类型、完整短视频流程、适合学习 AI 自媒体"
+            repos_by_url[item["url"]] = item
 
     for index, (term, fallback_category) in enumerate(SEARCH_TERMS, start=1):
         print(f"[{index}/{len(SEARCH_TERMS)}] Searching: {term}")
