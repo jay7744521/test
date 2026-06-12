@@ -490,16 +490,23 @@ def collect_projects() -> list[dict[str, Any]]:
         repo = fetch_repository(owner, repo_name)
         if not repo:
             continue
-        if not repo.get("description"):
-            repo["description"] = featured_description
-        item = normalize_repo(repo, fallback_category)
-        if item:
-            item["description"] = featured_description
-            item["category"] = fallback_category
-            item["chinese_summary"] = "这是 AI 自动短视频工具，偏向输入主题后自动写文案、配图/生成视频、配音并合成成片，适合学习 AI 自媒体完整流程。"
-            item["score"] += 40
-            item["reason"] = "你指定的重点类型、完整短视频流程、适合学习 AI 自媒体"
-            repos_by_url[item["url"]] = item
+        item = {
+            "name": repo.get("full_name") or f"{owner}/{repo_name}",
+            "url": repo.get("html_url") or f"https://github.com/{owner}/{repo_name}",
+            "description": featured_description,
+            "stars": int(repo.get("stargazers_count") or 0),
+            "language": repo.get("language") or "未知",
+            "updated_at": (repo.get("pushed_at") or repo.get("updated_at") or "")[:10],
+            "category": fallback_category,
+            "difficulty": "小白可先看",
+            "hardware": "低：可先学习流程；生成视频可能走 API 或云端服务",
+            "chinese_summary": "这是 AI 自动短视频工具，偏向输入主题后自动写文案、配图/生成视频、配音并合成成片，适合学习 AI 自媒体完整流程。",
+            "cost": "可能需要 API 费用",
+            "score": 999,
+            "reason": "你指定的重点类型、完整短视频流程、适合学习 AI 自媒体",
+            "first_step": "先看中文 README、视频教程和 Web UI 预览；老笔记本先学习流程，不急着本地生成视频。",
+        }
+        repos_by_url[item["url"]] = item
 
     for index, (term, fallback_category) in enumerate(SEARCH_TERMS, start=1):
         print(f"[{index}/{len(SEARCH_TERMS)}] Searching: {term}")
