@@ -47,7 +47,12 @@ SEARCH_TERMS = [
 ]
 
 FEATURED_REPOS = [
-    ("AIDC-AI", "Pixelle-Video", "短视频自动化"),
+    (
+        "AIDC-AI",
+        "Pixelle-Video",
+        "短视频自动化",
+        "AI 全自动短视频引擎：输入主题后自动写文案、生成图/视频、配音、加背景音乐并一键合成短视频。",
+    ),
 ]
 
 CATEGORY_KEYWORDS = [
@@ -480,13 +485,18 @@ def collect_projects() -> list[dict[str, Any]]:
     repos_by_url: dict[str, dict[str, Any]] = {}
     token = os.environ.get("GITHUB_TOKEN", "").strip()
 
-    for owner, repo_name, fallback_category in FEATURED_REPOS:
+    for owner, repo_name, fallback_category, featured_description in FEATURED_REPOS:
         print(f"[featured] Fetching: {owner}/{repo_name}")
         repo = fetch_repository(owner, repo_name)
         if not repo:
             continue
+        if not repo.get("description"):
+            repo["description"] = featured_description
         item = normalize_repo(repo, fallback_category)
         if item:
+            item["description"] = featured_description
+            item["category"] = fallback_category
+            item["chinese_summary"] = "这是 AI 自动短视频工具，偏向输入主题后自动写文案、配图/生成视频、配音并合成成片，适合学习 AI 自媒体完整流程。"
             item["score"] += 40
             item["reason"] = "你指定的重点类型、完整短视频流程、适合学习 AI 自媒体"
             repos_by_url[item["url"]] = item
